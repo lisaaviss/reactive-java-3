@@ -1,7 +1,12 @@
 package lab;
 
+import io.reactivex.rxjava3.core.BackpressureStrategy;
+import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
+import io.reactivex.rxjava3.subscribers.ResourceSubscriber;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -83,5 +88,57 @@ public class AggregatedDataCalculator {
                 .forEach(threadSafeList::add);
         return threadSafeList;
 
+    }
+
+    public static List<Commit> calculateWithReactiveFlow(List<Commit> commitList, List<Commit> threadSafeList, long delay) {
+        Flowable.fromIterable(commitList)
+                // Фильтруем элементы реактивно
+                .filter(commit -> commit.getAuthor().equals(commitList.get(0).getAuthor())) // Автор совпадает
+                .filter(commit -> commit.getCreationTime().isAfter(LocalDateTime.parse("2023-01-01T01:00:00")))
+                .filter(commit -> commit.getCreationTime().isBefore(LocalDateTime.parse("2024-01-01T01:00:00")))
+                .filter(commit -> commit.getStatus() == CommitStatus.COMPLETED || commit.getStatus() == CommitStatus.PENDING)
+                .filter(commit -> commit.getChangedFiles(delay).size() > 2)
+                .filter(commit -> commit.getAuthor().email().contains("@"))
+                // Асинхронная обработка с поддержкой backpressure
+                .observeOn(Schedulers.computation()) // Асинхронная обработка на отдельном потоке
+                .subscribe(new CommitSubscriber(threadSafeList)); // Наш кастомный Subscriber
+
+        return threadSafeList;
+    }
+
+    static class CommitSubscriber implements Subscriber<Commit> {
+        private final List<Commit> threadSafeList; // Результирующая коллекция
+        private Subscription subscription; // Для управления потоком
+        private int processed = 0; // Счетчик обработанных элементов
+
+        public CommitSubscriber(List<Commit> threadSafeList) {
+            this.threadSafeList = threadSafeList;
+        }
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            this.subscription = s;
+            s.request(1); // Запрашиваем первый элемент
+        }
+
+        @Override
+        public void onNext(Commit commit) {
+            // Добавляем элемент в потокобезопасный список
+            threadSafeList.add(commit);
+            processed++;
+
+            // Запрашиваем следующий элемент
+            subscription.request(1);
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            System.err.println("Произошла ошибка: " + t.getMessage());
+        }
+
+        @Override
+        public void onComplete() {
+            System.out.println("Обработка завершена. Всего обработано: " + processed + " элементов.");
+        }
     }
 }

@@ -19,12 +19,14 @@ public class AggregatedDataCalculatorBenchmark {
 
     private List<Commit> commitList500;
     private List<Commit> commitList2000;
+    private List<Commit> commitList100000;
     private List<Commit> threadSafeList;
 
     @Setup(Level.Trial)
     public void setUp() {
         commitList500 = CollectionFill.collectionFill(500);
         commitList2000 = CollectionFill.collectionFill(2000);
+        commitList100000 = CollectionFill.collectionFill(100000);
         threadSafeList = new CopyOnWriteArrayList<>();
     }
     @Group("ParallelStreamDelay")
@@ -49,7 +51,11 @@ public class AggregatedDataCalculatorBenchmark {
         return AggregatedDataCalculator.calculateWithStreamAPI(commitList2000, threadSafeList, 1);
     }
 
-
+    @Group("ReactiveFlow100000")
+    @Benchmark
+    public List<Commit> ReactiveFlow500() {
+        return AggregatedDataCalculator.calculateWithStreamAPI(commitList100000, threadSafeList, 0);
+    }
 }
 
 
