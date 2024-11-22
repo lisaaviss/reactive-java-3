@@ -43,18 +43,17 @@ public class AggregatedDataCalculatorBenchmark {
     @Group("ParallelReactiveDelay")
     @Benchmark
     public List<Commit> ParallelReactiveDelay500() {
-        return AggregatedDataCalculator.calculateWithStreamAPI(commitList500, threadSafeList, 1);
+        return AggregatedDataCalculator.calculateWithReactive(commitList500, threadSafeList, 1);
     }
     @Group("ParallelReactiveDelay")
     @Benchmark
     public List<Commit> ParallelReactiveDelay2000() {
-        return AggregatedDataCalculator.calculateWithStreamAPI(commitList2000, threadSafeList, 1);
+        return AggregatedDataCalculator.calculateWithReactive(commitList2000, threadSafeList, 1);
     }
 
-    @Group("ReactiveFlow100000")
     @Benchmark
-    public List<Commit> ReactiveFlow500() {
-        return AggregatedDataCalculator.calculateWithStreamAPI(commitList100000, threadSafeList, 0);
+    public List<Commit> ReactiveFlow100000() {
+        return AggregatedDataCalculator.calculateWithReactiveFlow(commitList100000, threadSafeList, 0);
     }
 }
 
